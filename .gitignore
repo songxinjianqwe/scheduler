@@ -1,0 +1,8 @@
+/target/
+/output/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
