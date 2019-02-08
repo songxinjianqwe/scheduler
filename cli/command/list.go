@@ -27,14 +27,15 @@ var ListCommand = cli.Command{
 		}
 		// 表格式打印
 		w := tabwriter.NewWriter(os.Stdout, 15, 1, 3, ' ', 0)
-		fmt.Fprint(w, "Id\tTaskType\tTime\tScript\tStatus\n")
+		fmt.Fprint(w, "Id\tTaskType\tTime\tScript\tStatus\tLastStatusUpdated\n")
 		for _, item := range tasks {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
 				item.Id,
 				item.TaskType,
 				item.Time,
 				item.Script,
-				item.Status.String())
+				item.Status.String(),
+				item.LastStatusUpdated)
 		}
 		if err := w.Flush(); err != nil {
 			return err

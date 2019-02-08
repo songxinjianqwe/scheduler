@@ -38,6 +38,7 @@ var GetCommand = cli.Command{
 		fmt.Printf("Time: %s\n", task.Time)
 		fmt.Printf("Script: %s\n", task.Script)
 		fmt.Printf("Status: %s\n", task.Status.String())
+		fmt.Printf("LastStatusUpdated: %s\n", task.LastStatusUpdated)
 		fmt.Println("Results: ")
 		for index, result := range task.Results {
 			fmt.Printf("[%d]%s\n", index, result.Timestamp)
