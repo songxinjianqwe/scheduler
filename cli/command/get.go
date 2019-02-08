@@ -27,7 +27,9 @@ var GetCommand = cli.Command{
 		if err != nil {
 			return err
 		}
-		task, err := schedulerClient.Get(taskId, false)
+		// 找不到则默认为false
+		watch := c.Bool("w")
+		task, err := schedulerClient.Get(taskId, watch)
 		if err != nil {
 			return err
 		}
@@ -35,6 +37,7 @@ var GetCommand = cli.Command{
 		fmt.Printf("TaskType: %s\n", task.TaskType)
 		fmt.Printf("Time: %s\n", task.Time)
 		fmt.Printf("Script: %s\n", task.Script)
+		fmt.Printf("Status: %s\n", task.Status.String())
 		fmt.Println("Results: ")
 		for index, result := range task.Results {
 			fmt.Printf("[%d]%s\n", index, result.Timestamp)

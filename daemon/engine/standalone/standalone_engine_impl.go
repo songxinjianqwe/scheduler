@@ -27,11 +27,11 @@ func (this *StandAloneEngine) Delete(id string) error {
 		return errors.New("task id not existed")
 	}
 	(task.(*common.Task)).Stop()
+	// 删除之后，有可能还会更新一次Result，但是无所谓，之后会回收掉
 	this.tasks.Delete(id)
 	return nil
 }
 
-// 单线程执行，没有线程安全问题
 func (this *StandAloneEngine) Submit(task *common.Task) error {
 	_, loaded := this.tasks.LoadOrStore(task.Id, task)
 	if loaded {

@@ -76,3 +76,27 @@ func SubmitTask(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 }
+
+func StopTask(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	vars := mux.Vars(r)
+	id := vars["id"]
+	err := scheduler.Stop(id)
+	if err != nil {
+		log.Errorf("停止任务失败，失败原因: %s", err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func DeleteTask(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	vars := mux.Vars(r)
+	id := vars["id"]
+	err := scheduler.Delete(id)
+	if err != nil {
+		log.Errorf("删除任务失败，失败原因: %s", err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}

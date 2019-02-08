@@ -93,3 +93,23 @@ func (this *SchedulerClient) Get(id string, watch bool) (*common.Task, error) {
 	var task common.Task
 	return &task, json.Unmarshal(body, &task)
 }
+
+func (this *SchedulerClient) Stop(id string) error {
+	request, _ := http.NewRequest(http.MethodPut, ServerAddr + "/tasks/" + id, nil)
+	response, err := this.httpClient.Do(request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+	return nil
+}
+
+func (this *SchedulerClient) Delete(id string) error {
+	request, _ := http.NewRequest(http.MethodDelete, ServerAddr + "/tasks/" + id, nil)
+	response, err := this.httpClient.Do(request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+	return nil
+}
