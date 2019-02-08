@@ -12,6 +12,8 @@ type Engine interface {
 	List() ([]*common.Task, error)
 	Submit(task *common.Task) error
 	Get(id string) (*common.Task, error)
+	Stop(id string) error
+	Delete(id string) error
 }
 
 var instantiated Engine

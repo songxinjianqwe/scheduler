@@ -37,7 +37,8 @@ var GetCommand = cli.Command{
 		fmt.Printf("Script: %s\n", task.Script)
 		fmt.Println("Results: ")
 		for index, result := range task.Results {
-			fmt.Printf("[%d]\n%s\n", index, result)
+			fmt.Printf("[%d]%s\n", index, result.Timestamp)
+			fmt.Printf("%s\n", result.Result)
 		}
 		return nil
 	},

@@ -57,8 +57,19 @@ func (this *SchedulerClient) Submit(task *common.Task) error {
 		return err
 	}
 	request, _ := http.NewRequest(http.MethodPost, ServerAddr+"/tasks", bytes.NewBuffer(taskBytes))
+	// err仅在服务器没相应的时候会报错，非200时err是空的，错误信息放到body里
 	response, err := this.httpClient.Do(request)
+	if err != nil {
+		return err
+	}
 	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+		return errors.New(string(body))
+	}
 	return err
 }
 

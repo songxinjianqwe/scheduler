@@ -22,17 +22,17 @@ func init() {
 func main() {
 	// register router
 	router := mux.NewRouter().StrictSlash(true)
-	subrouter := router.
+	subRouter := router.
 		PathPrefix("/api/tasks").
 		Subrouter()
 
-	subrouter.HandleFunc("", handler.GetAllTasksHandler).
+	subRouter.HandleFunc("", handler.GetAllTasksHandler).
 		Methods("GET")
-	subrouter.HandleFunc("/{id}", handler.GetTaskInfoHandler).
+	subRouter.HandleFunc("/{id}", handler.GetTaskInfoHandler).
 		Methods("GET")
-	subrouter.HandleFunc("", handler.SubmitTask).
+	subRouter.HandleFunc("", handler.SubmitTask).
 		Methods("POST")
-	// 打印一下handler
+	// 打印一下handlers
 	router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		pathTemplate, err := route.GetPathTemplate()
 		if err == nil {

@@ -32,7 +32,7 @@ var SubmitCommand = cli.Command{
 		}
 		taskId := c.Args().Get(0)
 		if taskId == "" {
-			return errors.New("task id can not blank")
+			return errors.New("task id can not be blank")
 		}
 		// 获取任务类型，值必须为delay或cron
 		taskType := c.String("type")
@@ -43,6 +43,9 @@ var SubmitCommand = cli.Command{
 		time := c.Duration("time")
 		// 获取脚本内容
 		script := c.String("script")
+		if script == "" {
+			return errors.New("script can not be blank")
+		}
 		// 启动客户端
 		schedulerClient, err := client.NewClient()
 		if err != nil {

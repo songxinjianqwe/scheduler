@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 	"github.com/songxinjianqwe/scheduler/common"
 	"github.com/songxinjianqwe/scheduler/daemon/engine"
 	"io/ioutil"
@@ -66,8 +67,10 @@ func SubmitTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "反序列任务失败", http.StatusInternalServerError)
 		return
 	}
+	log.Infof("Receive a task:%#v", task)
 	err = scheduler.Submit(&task)
 	if err != nil {
+		log.Errorf("提交任务失败，失败原因: %s", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
