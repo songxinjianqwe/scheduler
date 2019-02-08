@@ -10,16 +10,26 @@ import (
 )
 
 type Task struct {
-	Id                string        `json:"id"`
-	TaskType          string        `json:"taskType"`
-	Time              time.Duration `json:"time"`
-	Script            string        `json:"script"`
-	Results           []*TaskResult `json:"results"`
-	Status            TaskStatus    `json:"status"`
-	LastStatusUpdated time.Time     `json:"lastStatusUpdated"`
-	Timer             *time.Timer   `json:"-"`
-	Ticker            *time.Ticker  `json:"-"`
-	lock              *sync.Mutex   `json:"-"`
+	// task id, unique
+	Id                string          `json:"id"`
+	// task type, enum{delay,cron}
+	TaskType          string          `json:"taskType"`
+	// execute time
+	Time              time.Duration   `json:"time"`
+	// shell script
+	Script            string          `json:"script"`
+	// results
+	Results           []*TaskResult   `json:"results"`
+	// status, enum
+	Status            TaskStatus      `json:"status"`
+	// last status updated time
+	LastStatusUpdated time.Time       `json:"lastStatusUpdated"`
+	// task version, increase when data(Results,Status,LastStatusUpdated) changed.
+	Version           int64           `json:"version"`
+	Timer             *time.Timer     `json:"-"`
+	Ticker            *time.Ticker    `json:"-"`
+	lock              *sync.Mutex     `json:"-"`
+	listeners         []*func() `json:"-"`
 }
 
 func NewTask(id string, taskType string, time time.Duration, script string) *Task {
@@ -29,6 +39,7 @@ func NewTask(id string, taskType string, time time.Duration, script string) *Tas
 	task.Time = time
 	task.Script = script
 	task.Status = ToBeExecuted
+	task.Version = 0
 	task.lock = new(sync.Mutex)
 	return &task
 }
@@ -53,6 +64,7 @@ func (this *Task) Execute() {
 	this.Status = Executing
 	this.LastStatusUpdated = time.Now()
 	this.lock.Unlock()
+	this.increaseVersionAndSignalListeners()
 	// ~~~ATOMIC BLOCK END
 
 	// 执行，这段代码可能会耗时过长，不要阻塞Stop
@@ -126,4 +138,24 @@ func (this *Task) Stop() error {
 		}
 	}
 	return nil
+}
+
+func (this *Task) PrintMe() {
+	fmt.Printf("Id: %s\n", this.Id)
+	fmt.Printf("TaskType: %s\n", this.TaskType)
+	fmt.Printf("Time: %s\n", this.Time)
+	fmt.Printf("Script: %s\n", this.Script)
+	fmt.Printf("Status: %s\n", this.Status.String())
+	fmt.Printf("LastStatusUpdated: %s\n", this.LastStatusUpdated)
+	fmt.Println("Results: ")
+	for index, result := range this.Results {
+		fmt.Printf("[%d]%s\n", index, result.Timestamp)
+		fmt.Printf("%s\n", result.Result)
+	}
+}
+
+func (this *Task) increaseVersionAndSignalListeners() {
+	this.Version++
+	for _, listener := range this.listeners {
+	}
 }
