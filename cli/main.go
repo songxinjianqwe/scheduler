@@ -13,8 +13,8 @@ const (
 )
 
 /**
-	主goroutine从命令行读入类型、延迟时间与打印内容，并构造延迟任务或定时任务并使用timer来调度
- */
+主goroutine从命令行读入类型、延迟时间与打印内容，并构造延迟任务或定时任务并使用timer来调度
+*/
 func main() {
 	app := cli.NewApp()
 	app.Name = appName

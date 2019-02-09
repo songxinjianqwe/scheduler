@@ -9,9 +9,9 @@ import (
 )
 
 var ListCommand = cli.Command{
-	Name:         "list",
-	Aliases:      []string{"l"},
-	Usage:        "list all tasks",
+	Name:    "list",
+	Aliases: []string{"l"},
+	Usage:   "list all tasks",
 	Action: func(c *cli.Context) error {
 		schedulerClient, err := client.NewClient()
 		if err != nil {

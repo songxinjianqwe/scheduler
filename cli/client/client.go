@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	ServerAddr              = "http://localhost:8865/api"
+	ServerAddr = "http://localhost:8865/api"
 )
 
 type SchedulerClient struct {
@@ -19,8 +19,8 @@ type SchedulerClient struct {
 }
 
 /**
-	构造一个Client实例
- */
+构造一个Client实例
+*/
 func NewClient() (c *SchedulerClient, err error) {
 	schedulerClient := &SchedulerClient{}
 	schedulerClient.httpClient = &http.Client{}
@@ -28,8 +28,8 @@ func NewClient() (c *SchedulerClient, err error) {
 }
 
 /**
-	获取当前的所有任务
- */
+获取当前的所有任务
+*/
 func (this *SchedulerClient) List() ([]common.Task, error) {
 	request, _ := http.NewRequest(http.MethodGet, ServerAddr+"/tasks", nil)
 	response, err := this.httpClient.Do(request)
@@ -50,8 +50,8 @@ func (this *SchedulerClient) List() ([]common.Task, error) {
 }
 
 /**
-	提交一个任务
- */
+提交一个任务
+*/
 func (this *SchedulerClient) Submit(task *common.Task) error {
 	taskBytes, err := json.Marshal(task)
 	if err != nil {
@@ -75,10 +75,10 @@ func (this *SchedulerClient) Submit(task *common.Task) error {
 }
 
 /**
-	获取一个任务当前的执行情况
- */
+获取一个任务当前的执行情况
+*/
 func (this *SchedulerClient) Get(id string, watch bool, version int64) (*common.Task, error) {
-	request, _ := http.NewRequest(http.MethodGet, ServerAddr + "/tasks/" + id, nil)
+	request, _ := http.NewRequest(http.MethodGet, ServerAddr+"/tasks/"+id, nil)
 	q := request.URL.Query()
 	q.Add("watch", strconv.FormatBool(watch))
 	q.Add("version", strconv.FormatInt(version, 10))
@@ -100,7 +100,7 @@ func (this *SchedulerClient) Get(id string, watch bool, version int64) (*common.
 }
 
 func (this *SchedulerClient) Stop(id string) error {
-	request, _ := http.NewRequest(http.MethodPut, ServerAddr + "/tasks/" + id, nil)
+	request, _ := http.NewRequest(http.MethodPut, ServerAddr+"/tasks/"+id, nil)
 	response, err := this.httpClient.Do(request)
 	if err != nil {
 		return err
@@ -117,7 +117,7 @@ func (this *SchedulerClient) Stop(id string) error {
 }
 
 func (this *SchedulerClient) Delete(id string) error {
-	request, _ := http.NewRequest(http.MethodDelete, ServerAddr + "/tasks/" + id, nil)
+	request, _ := http.NewRequest(http.MethodDelete, ServerAddr+"/tasks/"+id, nil)
 	response, err := this.httpClient.Do(request)
 	if err != nil {
 		return err

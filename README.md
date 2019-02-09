@@ -60,7 +60,7 @@ Methods: DELETE
 
 ### 查询任务列表
 #### `命令`
-./cli list
+`./cli list`
 #### 示例![image.png](https://cdn.nlark.com/yuque/0/2019/png/257642/1549696338600-7738aeee-e986-406c-bf1b-e01aad22ce8c.png#align=left&display=inline&height=62&linkTarget=_blank&name=image.png&originHeight=78&originWidth=1259&size=24090&width=1007)<br />
 ### 提交任务
 #### 命令

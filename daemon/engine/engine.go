@@ -2,11 +2,7 @@ package engine
 
 import (
 	"github.com/songxinjianqwe/scheduler/common"
-	"github.com/songxinjianqwe/scheduler/daemon/engine/standalone"
-	"sync"
 )
-
-
 
 type Engine interface {
 	List() ([]common.Task, error)
@@ -15,16 +11,3 @@ type Engine interface {
 	Stop(id string) error
 	Delete(id string) error
 }
-
-var instantiated Engine
-var once sync.Once
-
-func NewEngine() Engine {
-	once.Do(func() {
-		instantiated = &standalone.StandAloneEngine{}
-	})
-	return instantiated
-}
-
-
-

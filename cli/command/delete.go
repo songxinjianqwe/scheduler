@@ -7,9 +7,9 @@ import (
 )
 
 var DeleteCommand = cli.Command{
-	Name: "delete",
+	Name:    "delete",
 	Aliases: []string{"d"},
-	Usage: "delete a task",
+	Usage:   "delete a task",
 	Action: func(c *cli.Context) error {
 		// 第一个参数默认为id，检查id是否存在，且非空
 		if c.NArg() == 0 {

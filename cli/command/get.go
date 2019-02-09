@@ -8,9 +8,9 @@ import (
 )
 
 var GetCommand = cli.Command{
-	Name: "get",
+	Name:    "get",
 	Aliases: []string{"g"},
-	Usage: "get results of a task",
+	Usage:   "get results of a task",
 	Flags: []cli.Flag{
 		cli.BoolFlag{
 			Name:  "watch",

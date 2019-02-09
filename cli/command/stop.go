@@ -7,9 +7,9 @@ import (
 )
 
 var StopCommand = cli.Command{
-	Name: "stop",
+	Name:    "stop",
 	Aliases: []string{"s"},
-	Usage: "stop a task",
+	Usage:   "stop a task",
 	Action: func(c *cli.Context) error {
 		// 第一个参数默认为id，检查id是否存在，且非空
 		if c.NArg() == 0 {

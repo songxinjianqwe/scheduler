@@ -21,15 +21,15 @@ const (
 	Executed             TaskStatus = 1
 	Executing            TaskStatus = 2
 	WaitForNextExecution TaskStatus = 3
-	Stopped 		     TaskStatus = 4
+	Stopped              TaskStatus = 4
 )
 
 var statusText = map[TaskStatus]string{
-	ToBeExecuted:  "ToBeExecuted",
-	Executed:     "Executed",
-	Executing:  "Executing",
+	ToBeExecuted:         "ToBeExecuted",
+	Executed:             "Executed",
+	Executing:            "Executing",
 	WaitForNextExecution: "WaitForNextExecution",
-	Stopped: "Stopped",
+	Stopped:              "Stopped",
 }
 
 func (status TaskStatus) String() string {
@@ -39,5 +39,5 @@ func (status TaskStatus) String() string {
 	}
 	return "UNKNOWN"
 }
-// 枚举定义结束
 
+// 枚举定义结束

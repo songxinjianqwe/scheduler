@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/songxinjianqwe/scheduler/common"
 	"github.com/songxinjianqwe/scheduler/daemon/engine"
+	"github.com/songxinjianqwe/scheduler/daemon/engine/standalone"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -15,7 +16,8 @@ import (
 var scheduler engine.Engine
 
 func init() {
-	scheduler = engine.NewEngine()
+	// 暂时使用这个实现类8
+	scheduler = standalone.NewStandAloneEngine()
 }
 
 func GetAllTasksHandler(w http.ResponseWriter, r *http.Request) {

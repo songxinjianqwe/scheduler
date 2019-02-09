@@ -11,6 +11,16 @@ type StandAloneEngine struct {
 	tasks sync.Map // key为task id，类型为string；value为task实例的指针
 }
 
+var instantiated *StandAloneEngine
+var once sync.Once
+
+func NewStandAloneEngine() *StandAloneEngine {
+	once.Do(func() {
+		instantiated = &StandAloneEngine{}
+	})
+	return instantiated
+}
+
 func (this *StandAloneEngine) Stop(id string) error {
 	task, ok := this.tasks.Load(id)
 	if !ok {
@@ -33,7 +43,6 @@ func (this *StandAloneEngine) Delete(id string) error {
 }
 
 func (this *StandAloneEngine) Submit(task common.Task) error {
-
 	_, loaded := this.tasks.LoadOrStore(task.Id, &task)
 	if loaded {
 		return errors.New("task id existed")
@@ -59,6 +68,7 @@ func (this *StandAloneEngine) Submit(task common.Task) error {
 	}
 	return nil
 }
+
 // Get返回的是原来的一份拷贝
 func (this *StandAloneEngine) Get(id string, watch bool, version int64) (common.Task, error) {
 	value, ok := this.tasks.Load(id)
