@@ -23,6 +23,8 @@ func main() {
 		command.GetCommand,
 		command.ListCommand,
 		command.SubmitCommand,
+		command.StopCommand,
+		command.DeleteCommand,
 	}
 	err := app.Run(os.Args)
 	if err != nil {

@@ -2,6 +2,7 @@ package command
 
 import (
 	"errors"
+	"fmt"
 	"github.com/songxinjianqwe/scheduler/cli/client"
 	"github.com/urfave/cli"
 )
@@ -12,7 +13,7 @@ var GetCommand = cli.Command{
 	Usage: "get results of a task",
 	Flags: []cli.Flag{
 		cli.BoolFlag{
-			Name:  "w",
+			Name:  "watch",
 			Usage: "watch task results",
 		},
 	},
@@ -27,7 +28,7 @@ var GetCommand = cli.Command{
 			return err
 		}
 		// 找不到则默认为false
-		watch := c.Bool("w")
+		watch := c.Bool("watch")
 		// 如果watch为true，则执行一个http long polling
 		// 1. cli发起一个HTTP请求，watch=false，获取初始数据，带回版本v1
 		// 2. 服务器返回最新数据
@@ -37,12 +38,24 @@ var GetCommand = cli.Command{
 		// 	  - 如果是，说明服务器数据没有变更，则在服务器注册一个Listener至该任务对象中，并阻塞；其他goroutine如果修改了任务对象，则v=v2，并唤醒该Listener。
 		//	  Listener被唤醒后返回最新数据，v=v2
 		// 5. 重复3~4
-		// 如果2~3之间有数据变化，那么如何感知到呢？版本概念！
-		task, err := schedulerClient.Get(taskId, watch)
+
+		task, err := schedulerClient.Get(taskId, false, 0)
 		if err != nil {
 			return err
 		}
 		task.PrintMe()
+		// 如果是需要监听，则进入一个无线循环
+		if watch {
+			for {
+				fmt.Println("------------------------------------")
+				version := task.Version
+				task, err = schedulerClient.Get(taskId, watch, version)
+				if err != nil {
+					return err
+				}
+				task.PrintMe()
+			}
+		}
 		return nil
 	},
 }

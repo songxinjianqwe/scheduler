@@ -7,6 +7,7 @@ import (
 	"github.com/songxinjianqwe/scheduler/common"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 )
 
 const (
@@ -76,8 +77,12 @@ func (this *SchedulerClient) Submit(task *common.Task) error {
 /**
 	获取一个任务当前的执行情况
  */
-func (this *SchedulerClient) Get(id string, watch bool) (*common.Task, error) {
+func (this *SchedulerClient) Get(id string, watch bool, version int64) (*common.Task, error) {
 	request, _ := http.NewRequest(http.MethodGet, ServerAddr + "/tasks/" + id, nil)
+	q := request.URL.Query()
+	q.Add("watch", strconv.FormatBool(watch))
+	q.Add("version", strconv.FormatInt(version, 10))
+	request.URL.RawQuery = q.Encode()
 	response, err := this.httpClient.Do(request)
 	if err != nil {
 		return nil, err
@@ -101,6 +106,13 @@ func (this *SchedulerClient) Stop(id string) error {
 		return err
 	}
 	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+		return errors.New(string(body))
+	}
 	return nil
 }
 
@@ -111,5 +123,12 @@ func (this *SchedulerClient) Delete(id string) error {
 		return err
 	}
 	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+		return errors.New(string(body))
+	}
 	return nil
 }

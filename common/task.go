@@ -11,93 +11,89 @@ import (
 
 type Task struct {
 	// task id, unique
-	Id                string          `json:"id"`
+	Id string `json:"id"`
 	// task type, enum{delay,cron}
-	TaskType          string          `json:"taskType"`
+	TaskType string `json:"taskType"`
 	// execute time
-	Time              time.Duration   `json:"time"`
+	Time time.Duration `json:"time"`
 	// shell script
-	Script            string          `json:"script"`
+	Script string `json:"script"`
 	// results
-	Results           []*TaskResult   `json:"results"`
+	Results []TaskResult `json:"results"`
 	// status, enum
-	Status            TaskStatus      `json:"status"`
+	Status TaskStatus `json:"status"`
 	// last status updated time
-	LastStatusUpdated time.Time       `json:"lastStatusUpdated"`
+	LastStatusUpdated time.Time `json:"lastStatusUpdated"`
 	// task version, increase when data(Results,Status,LastStatusUpdated) changed.
-	Version           int64           `json:"version"`
-	Timer             *time.Timer     `json:"-"`
-	Ticker            *time.Ticker    `json:"-"`
-	lock              *sync.Mutex     `json:"-"`
-	listeners         []*func() `json:"-"`
+	Version   int64        `json:"version"`
+	timer     *time.Timer  `json:"-"`
+	ticker    *time.Ticker `json:"-"`
+	lock      *sync.Mutex  `json:"-"`
+	watchCond *sync.Cond   `json:"-"`
 }
 
-func NewTask(id string, taskType string, time time.Duration, script string) *Task {
+func NewTask(id string, taskType string, dueTime time.Duration, script string) *Task {
 	task := Task{}
 	task.Id = id
 	task.TaskType = taskType
-	task.Time = time
+	task.Time = dueTime
 	task.Script = script
 	task.Status = ToBeExecuted
+	task.LastStatusUpdated = time.Now()
 	task.Version = 0
-	task.lock = new(sync.Mutex)
 	return &task
 }
 
-// 这里是否需要考虑线程安全问题？
+// 将lock和watch condition延迟初始化，在客户端NewTask时这两个是用不到的
+func (this *Task) PopulateTaskTimer(timer *time.Timer) {
+	this.timer = timer
+	this.lock = new(sync.Mutex)
+	this.watchCond = sync.NewCond(this.lock)
+}
+
+func (this *Task) PopulateTaskTicker(ticker *time.Ticker) {
+	this.ticker = ticker
+	this.lock = new(sync.Mutex)
+	this.watchCond = sync.NewCond(this.lock)
+}
+
+// 这里需要考虑线程安全问题!
 // 执行永远是在同一个goroutine中执行
-// 但是stop和delete会在另一个goroutine中执行
+// 但是stop会在另一个goroutine中执行
 // 它们会并发地修改Task的内部状态
 // 最好是能在task粒度上加一个互斥锁
-// 另外是内存可见性问题：get能否读到最新的对象值？
+// 另外是内存可见性问题：get能否读到最新的对象值？Go中没有volatile，要想保证读到最新的值，需要加锁或者atomic等
 func (this *Task) Execute() {
-	this.lock.Lock()
-	// ~~~ATOMIC BLOCK BEGIN
 	// 其实如果真的停止Timer或者Ticker，那么Execute是不会被执行的
 	// 极端情况下，刚刚Stop，Execute就到期开始执行了，此时需要double check一下
-	if this.Status == Stopped {
-		log.Warn("任务[%s]已经被停止，不再执行", this.Id)
-		this.lock.Unlock()
+	// 理论上Stop先执行，会加锁，然后停止计时器
+	// 如果在这段时间的同时，计时器到期，开始Execute，会因为获取不到锁而阻塞，所以
+	if this.checkIfAlreadyStoppedThenUpdateStatusAtomically() {
+		// 这里是先检查是否已经停止，如果是，则退出
+		// 如果不是，则将状态更新为执行中
+		// 这个操作是原子执行的
+		// 1) Execute，check获取锁，Stop等待，check完毕，状态更新为执行中，Stop拿到锁，发现状态为执行中，则停止失败
+		// 2）Stop获取锁，Execute等待，状态更新为已停止，Execute拿到锁，发现状态为已停止，则退出执行
 		return
 	}
-	// 开始执行
-	this.Status = Executing
-	this.LastStatusUpdated = time.Now()
-	this.lock.Unlock()
-	this.increaseVersionAndSignalListeners()
-	// ~~~ATOMIC BLOCK END
 
-	// 执行，这段代码可能会耗时过长，不要阻塞Stop
-	now := time.Now()
+	// 非原子执行，这段代码可能会耗时过长，不需要加锁，不会修改状态
 	cmd := exec.Command("/bin/bash", "-c", this.Script)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
 
-	// ~~~ATOMIC BLOCK BEGIN
-	this.lock.Lock()
+	var result string
 	if err != nil {
 		log.Error(err)
-		this.Results = append(this.Results, NewTaskResult(now, err.Error()))
+		result = err.Error()
 	} else {
 		log.Infof("Task stdout: %s", out.String())
-		this.Results = append(this.Results, NewTaskResult(now, out.String()))
+		result = out.String()
 	}
-	// 执行完毕
-	if this.TaskType == "delay" {
-		this.Status = Executed
-		this.LastStatusUpdated = time.Now()
-		this.Timer.Stop()
-	} else if this.TaskType == "cron" {
-		// 如果任务在执行时被停止，则发起停止命令的goroutine会将状态置为Stopped，此时就保留Stopped状态，不会将状态置为WaitForNextExecution
-		// 如果任务正常执行，则在执行一次后，将状态置为WaitForNextExecution
-		if this.Status != Stopped {
-			this.Status = WaitForNextExecution
-			this.LastStatusUpdated = time.Now()
-		}
-	}
-	this.lock.Unlock()
-	// ~~~ATOMIC BLOCK END
+
+	// 修改状态，原子执行
+	this.appendResultAndUpdateStatusAtomically(result)
 }
 
 /**
@@ -110,6 +106,7 @@ func (this *Task) Execute() {
 		2）如果在某一次任务开始执行后停止，则任务本次执行不会被中止，且会保存本次执行结果，终态为Stopped
 		3）如果在某一个任务任务执行后，下一次任务执行前停止，则下次执行会被跳过，终态为Stopped
  */
+// @Atomically
 func (this *Task) Stop() error {
 	this.lock.Lock()
 	defer this.lock.Unlock()
@@ -119,9 +116,9 @@ func (this *Task) Stop() error {
 	if this.TaskType == "delay" {
 		// 此时task的状态有可能是三种情况，只有ToBeExecuted状态下我们才能去stop
 		if this.Status == ToBeExecuted {
-			this.Timer.Stop()
-			this.Status = Stopped
-			this.LastStatusUpdated = time.Now()
+			this.timer.Stop()
+			this.updateStatus(Stopped)
+			this.increaseVersionAndSignalListeners()
 		} else {
 			// 此时为Executing或Executed状态，无法停止
 			return fmt.Errorf("任务状态为%s, 本次执行无法停止", this.Status.String())
@@ -130,14 +127,72 @@ func (this *Task) Stop() error {
 		// 虽然Executing状态无法停止，但是可以让它这次执行完毕，在这里置状态为Stopped，正在执行的goroutine会检测到，然后不会把
 		// 状态改回WaitForNextExecution
 		isExecuting := this.Status == Executing
-		this.Ticker.Stop()
-		this.Status = Stopped
-		this.LastStatusUpdated = time.Now()
+		this.ticker.Stop()
+		this.updateStatus(Stopped)
+		this.increaseVersionAndSignalListeners()
 		if isExecuting {
 			return fmt.Errorf("任务状态为%s, 本次执行无法停止, 但已停止后续执行", this.Status.String())
 		}
 	}
 	return nil
+}
+
+// 返回一份拷贝
+func (this *Task) GetLatest(watch bool, version int64) (Task, error) {
+	// 如果是非watch，或者是watch，但版本不同，则都返回最新值
+	this.lock.Lock()
+	defer this.lock.Unlock()
+	if !watch || this.Version != version {
+		return *this, nil
+	}
+	for this.Version == version {
+		// 此时版本相同，需要阻塞等待
+		this.watchCond.Wait()
+	}
+	return *this, nil
+}
+
+// @Atomically
+func (this *Task) checkIfAlreadyStoppedThenUpdateStatusAtomically() bool {
+	this.lock.Lock()
+	defer this.lock.Unlock()
+	if this.Status == Stopped {
+		log.Error("任务[%s]已经被停止，不再执行", this.Id)
+		return true
+	}
+	this.updateStatus(Executing)
+	this.increaseVersionAndSignalListeners()
+	return false
+}
+
+// @Atomically
+func (this *Task) appendResultAndUpdateStatusAtomically(result string) {
+	this.lock.Lock()
+	defer this.lock.Unlock()
+	this.Results = append(this.Results, NewTaskResult(time.Now(), result))
+	// 执行完毕
+	if this.TaskType == "delay" {
+		this.updateStatus(Executed)
+	} else if this.TaskType == "cron" {
+		// 如果任务在执行时被停止，则发起停止命令的goroutine会将状态置为Stopped，此时就保留Stopped状态，不会将状态置为WaitForNextExecution
+		// 如果任务正常执行，则在执行一次后，将状态置为WaitForNextExecution
+		if this.Status != Stopped {
+			this.updateStatus(WaitForNextExecution)
+		}
+	}
+	this.increaseVersionAndSignalListeners()
+}
+
+// 必须放在lock里面调用
+func (this *Task) updateStatus(status TaskStatus) {
+	this.Status = status
+	this.LastStatusUpdated = time.Now()
+}
+
+// 必须放在lock里面调用
+func (this *Task) increaseVersionAndSignalListeners() {
+	this.Version++
+	this.watchCond.Broadcast()
 }
 
 func (this *Task) PrintMe() {
@@ -151,11 +206,5 @@ func (this *Task) PrintMe() {
 	for index, result := range this.Results {
 		fmt.Printf("[%d]%s\n", index, result.Timestamp)
 		fmt.Printf("%s\n", result.Result)
-	}
-}
-
-func (this *Task) increaseVersionAndSignalListeners() {
-	this.Version++
-	for _, listener := range this.listeners {
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/songxinjianqwe/scheduler/daemon/engine"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 )
 
 var scheduler engine.Engine
@@ -40,7 +41,18 @@ func GetTaskInfoHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	vars := mux.Vars(r)
 	id := vars["id"]
-	task, err := scheduler.Get(id)
+	watch, err := strconv.ParseBool(r.URL.Query().Get("watch"))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("watch参数必须传入，且为true或false: %s", err.Error()), http.StatusBadRequest)
+		return
+	}
+	versionStr := r.URL.Query().Get("version")
+	version, err := strconv.ParseInt(versionStr, 10, 64)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("version参数必须传入，且为int64类型: %s", err.Error()), http.StatusBadRequest)
+		return
+	}
+	task, err := scheduler.Get(id, watch, version)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("任务ID[%s]不存在", id), http.StatusBadRequest)
 		return
@@ -68,7 +80,7 @@ func SubmitTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Infof("Receive a task:%#v", task)
-	err = scheduler.Submit(&task)
+	err = scheduler.Submit(task)
 	if err != nil {
 		log.Errorf("提交任务失败，失败原因: %s", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -84,7 +96,7 @@ func StopTask(w http.ResponseWriter, r *http.Request) {
 	err := scheduler.Stop(id)
 	if err != nil {
 		log.Errorf("停止任务失败，失败原因: %s", err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 }
