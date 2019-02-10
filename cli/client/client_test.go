@@ -1,20 +1,19 @@
-package main
+package client
 
 import (
 	"github.com/satori/go.uuid"
-	"github.com/songxinjianqwe/scheduler/cli/client"
 	"github.com/songxinjianqwe/scheduler/common"
 	"github.com/songxinjianqwe/scheduler/daemon/server"
 	"testing"
 	"time"
 )
 
-var schedulerClient *client.SchedulerClient
+var schedulerClient *SchedulerClient
 
 func TestMain(m *testing.M) {
 	go server.Run()
 	time.Sleep(time.Second * 2)
-	schedulerClient, _ = client.NewClient()
+	schedulerClient, _ = NewClient()
 	m.Run()
 }
 
