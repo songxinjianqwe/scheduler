@@ -25,11 +25,11 @@ type Task struct {
 	// last status updated time
 	LastStatusUpdated time.Time `json:"lastStatusUpdated"`
 	// task version, increase when data(Results,Status,LastStatusUpdated) changed.
-	Version   int64        `json:"version"`
-	timer     *time.Timer  `json:"-"`
-	ticker    *time.Ticker `json:"-"`
-	lock      *sync.Mutex  `json:"-"`
-	watchCond *sync.Cond   `json:"-"`
+	Version   int64 `json:"version"`
+	timer     *time.Timer
+	ticker    *time.Ticker
+	lock      *sync.Mutex
+	watchCond *sync.Cond
 }
 
 func NewTask(id string, taskType string, dueTime time.Duration, script string) *Task {

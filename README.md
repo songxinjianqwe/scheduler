@@ -1,4 +1,9 @@
 # Scheduler
+[![Travis-CI](https://travis-ci.org/songxinjianqwe/scheduler.svg)](https://travis-ci.org/songxinjianqwe/scheduler)
+[![Windows Build Status](https://ci.appveyor.com/api/projects/status/rtgk5xufi932pb2v?svg=true)](https://ci.appveyor.com/project/songxinjianqwe/scheduler)
+[![GoDoc](https://godoc.org/github.com/songxinjianqwe/scheduler?status.svg)](http://godoc.org/github.com/songxinjianqwe/scheduler)
+[![Report card](https://goreportcard.com/badge/github.com/songxinjianqwe/scheduler)](https://goreportcard.com/report/github.com/songxinjianqwe/scheduler)
+[![top level coverage](https://gocover.io/_badge/github.com/songxinjianqwe/scheduler?0 "top level coverage")](http://gocover.io/github.com/songxinjianqwe/scheduler)
 
 # 单机scheduler实现，包含客户端和服务器
 [https://github.com/songxinjianqwe/scheduler](https://github.com/songxinjianqwe/scheduler)
