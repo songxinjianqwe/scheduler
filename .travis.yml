@@ -1,18 +1,35 @@
 language: go
 go:
-  - 1.11.x
   - master
 before_install:
   - go get github.com/urfave/cli
   - go get github.com/sirupsen/logrus
   - go get github.com/gorilla/mux
   - go get github.com/satori/go.uuid
-notifications:
-  email:
-    recipients:
-      - songxinjianzx@163.com
-    on_success: change
-    on_failure: always
 
 #install 阶段：安装依赖 travis_install_go_dependencies <go-version> [gobuild-args]
+#If a Makefile is present by any of the following names, then no further actions are taken in the install step:
+#
+#  GNUMakefile
+#  Makefile
+#  BSDmakefile
+#  makefile
+#  In all other cases, the command go get ${gobuild_args} ./... is run.
+
 #script 阶段：运行脚本 travis_script_go {gobuild-args}
+#  make
+#  Bash
+#  In case there is no Makefile, it will be
+#
+#  go test ${gobuild_args} ./...
+
+# 生命周期
+#  before_install
+#  install
+#  before_script
+#  script
+#  aftersuccess or afterfailure
+#  [OPTIONAL] before_deploy
+#  [OPTIONAL] deploy
+#  [OPTIONAL] after_deploy
+#  after_script
