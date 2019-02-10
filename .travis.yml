@@ -1,3 +1,18 @@
 language: go
 go:
+  - 1.11.x
   - master
+before_install:
+  - go get github.com/urfave/cli
+  - go get github.com/sirupsen/logrus
+  - go get github.com/gorilla/mux
+  - go get github.com/satori/go.uuid
+notifications:
+  email:
+    recipients:
+      - songxinjianzx@163.com
+    on_success: change
+    on_failure: always
+
+#install 阶段：安装依赖 travis_install_go_dependencies <go-version> [gobuild-args]
+#script 阶段：运行脚本 travis_script_go {gobuild-args}

@@ -14,7 +14,11 @@
 4、后续可以将命令执行环境从宿主机移至容器中，以增强隔离性。计划依赖containerd来实现，进一步熟悉容器技术。
 ## 架构
 CS架构，Client为CLI工具，Server为HTTP Server，均使用Go语言编写。
-
+## 依赖
+- go get github.com/urfave/cli
+- go get github.com/sirupsen/logrus
+- go get github.com/gorilla/mux
+- go get github.com/satori/go.uuid
 ## 安装
 ### 客户端CLI
 
