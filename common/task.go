@@ -157,7 +157,7 @@ func (this *Task) checkIfAlreadyStoppedThenUpdateStatusAtomically() bool {
 	this.lock.Lock()
 	defer this.lock.Unlock()
 	if this.Status == Stopped {
-		log.Error("任务[%s]已经被停止，不再执行", this.Id)
+		log.Errorf("任务[%s]已经被停止，不再执行", this.Id)
 		return true
 	}
 	this.updateStatus(Executing)
