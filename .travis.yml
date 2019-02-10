@@ -1,11 +1,6 @@
 language: go
 go:
   - master
-before_install:
-  - go get github.com/urfave/cli
-  - go get github.com/sirupsen/logrus
-  - go get github.com/gorilla/mux
-  - go get github.com/satori/go.uuid
 script:
   - go test ./... -coverprofile=coverage.txt -covermode=atomic
 after_success:
