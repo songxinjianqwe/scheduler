@@ -21,6 +21,7 @@ CS架构，Client为CLI工具，Server为HTTP Server，均使用Go语言编写�
 - go get github.com/sirupsen/logrus
 - go get github.com/gorilla/mux
 - go get github.com/satori/go.uuid
+
 ## 安装
 ### 客户端CLI
 

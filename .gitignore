@@ -1,6 +1,6 @@
 /target/
 /output/
-
+coverage.txt
 ### IntelliJ IDEA ###
 .idea
 *.iws

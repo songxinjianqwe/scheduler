@@ -64,6 +64,7 @@ func (this *Task) PopulateTaskTicker(ticker *time.Ticker) {
 // 最好是能在task粒度上加一个互斥锁
 // 另外是内存可见性问题：get能否读到最新的对象值？Go中没有volatile，要想保证读到最新的值，需要加锁或者atomic等
 func (this *Task) Execute() {
+	log.Infof("start executing task[%s]", this.Id)
 	// 其实如果真的停止Timer或者Ticker，那么Execute是不会被执行的
 	// 极端情况下，刚刚Stop，Execute就到期开始执行了，此时需要double check一下
 	// 理论上Stop先执行，会加锁，然后停止计时器
@@ -110,6 +111,7 @@ func (this *Task) Execute() {
 func (this *Task) Stop() error {
 	this.lock.Lock()
 	defer this.lock.Unlock()
+	log.Infof("start stopping task[%s]", this.Id)
 	if this.Status == Stopped {
 		return fmt.Errorf("任务已经被停止")
 	}
