@@ -6,6 +6,10 @@ before_install:
   - go get github.com/sirupsen/logrus
   - go get github.com/gorilla/mux
   - go get github.com/satori/go.uuid
+script:
+  - go test -race -coverprofile=coverage.txt -covermode=atomic
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
 
 #install 阶段：安装依赖 travis_install_go_dependencies <go-version> [gobuild-args]
 #If a Makefile is present by any of the following names, then no further actions are taken in the install step:
