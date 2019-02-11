@@ -76,14 +76,14 @@ func (this *StandAloneEngine) Get(id string, watch bool, version int64) (common.
 		return common.Task{}, errors.New("task id not existed")
 	}
 	task := value.(*common.Task)
-	return task.GetLatest(watch, version)
+	return task.GetLatest(watch, version), nil
 }
 
 // List返回的是原来的一份拷贝
 func (this *StandAloneEngine) List() ([]common.Task, error) {
 	var tasks []common.Task
 	this.tasks.Range(func(key, value interface{}) bool {
-		tasks = append(tasks, *value.(*common.Task))
+		tasks = append(tasks, value.(*common.Task).GetLatest(false, 0))
 		return true
 	})
 	if tasks == nil {

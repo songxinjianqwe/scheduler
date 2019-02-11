@@ -28,7 +28,7 @@ type Task struct {
 	Version   int64 `json:"version"`
 	timer     *time.Timer
 	ticker    *time.Ticker
-	lock      *sync.Mutex
+	lock      *sync.RWMutex
 	watchCond *sync.Cond
 }
 
@@ -47,14 +47,14 @@ func NewTask(id string, taskType string, dueTime time.Duration, script string) *
 // 将lock和watch condition延迟初始化，在客户端NewTask时这两个是用不到的
 func (this *Task) PopulateTaskTimer(timer *time.Timer) {
 	this.timer = timer
-	this.lock = new(sync.Mutex)
-	this.watchCond = sync.NewCond(this.lock)
+	this.lock = new(sync.RWMutex)
+	this.watchCond = sync.NewCond(this.lock.RLocker())
 }
 
 func (this *Task) PopulateTaskTicker(ticker *time.Ticker) {
 	this.ticker = ticker
-	this.lock = new(sync.Mutex)
-	this.watchCond = sync.NewCond(this.lock)
+	this.lock = new(sync.RWMutex)
+	this.watchCond = sync.NewCond(this.lock.RLocker())
 }
 
 // 这里需要考虑线程安全问题!
@@ -140,18 +140,18 @@ func (this *Task) Stop() error {
 }
 
 // 返回一份拷贝
-func (this *Task) GetLatest(watch bool, version int64) (Task, error) {
+func (this *Task) GetLatest(watch bool, version int64) Task {
 	// 如果是非watch，或者是watch，但版本不同，则都返回最新值
-	this.lock.Lock()
-	defer this.lock.Unlock()
+	this.lock.RLock()
+	defer this.lock.RUnlock()
 	if !watch || this.Version != version {
-		return *this, nil
+		return *this
 	}
 	for this.Version == version {
 		// 此时版本相同，需要阻塞等待
 		this.watchCond.Wait()
 	}
-	return *this, nil
+	return *this
 }
 
 // @Atomically
