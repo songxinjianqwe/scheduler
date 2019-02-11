@@ -197,6 +197,19 @@ func (this *Task) increaseVersionAndSignalListeners() {
 	this.watchCond.Broadcast()
 }
 
+func (this *Task) Clone() Task {
+	this.lock.RLock()
+	defer this.lock.RUnlock()
+	aCopy := *this
+	aCopy.lock = nil
+	aCopy.ticker = nil
+	aCopy.timer = nil
+	aCopy.watchCond = nil
+	aCopy.Results = make([]TaskResult, len(this.Results))
+	copy(aCopy.Results, this.Results)
+	return aCopy
+}
+
 func (this *Task) PrintMe() {
 	fmt.Printf("Id: %s\n", this.Id)
 	fmt.Printf("TaskType: %s\n", this.TaskType)

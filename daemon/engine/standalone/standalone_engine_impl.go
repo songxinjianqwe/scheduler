@@ -83,7 +83,7 @@ func (this *StandAloneEngine) Get(id string, watch bool, version int64) (common.
 func (this *StandAloneEngine) List() ([]common.Task, error) {
 	var tasks []common.Task
 	this.tasks.Range(func(key, value interface{}) bool {
-		tasks = append(tasks, value.(*common.Task).GetLatest(false, 0))
+		tasks = append(tasks, value.(*common.Task).Clone())
 		return true
 	})
 	if tasks == nil {
