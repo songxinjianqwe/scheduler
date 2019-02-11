@@ -109,6 +109,8 @@ Methods: DELETE
 写写并发：submit任务之后的execute与stop不会在同一个goroutine中执行，由此会带来并发问题。<br />~~读写并发：List读取操作并不要求返回快照，否则代价太大，需要加全局锁，阻塞所有写操作（然后拷贝一份）。使用go test -race会检测到一系列的读写race，基本都是List()的读操作与对某些task的状态的写操作造成的，但这并不代表程序状态错误。~~<br />~~sync.Map#Range能做到的应该是遍历目前现存的所有元素，但不会保证每个元素的值都是在同一时刻的快照。而我们确实也不需要保证读到的是快照。~~
 ##### 首次检测race
 
+```text
+
 ==================
 WARNING: DATA RACE
 Read at 0x00c0001b62b8 by goroutine 15:
@@ -499,6 +501,8 @@ FAIL
 coverage: 60.3% of statements
 Found 6 data race(s)
 
+```
+
 
 仔细观察，发现其中很大一部分是先写（比如task的状态更新），再在List()中json序列化时读，出现读写冲突。<br />但是在List()时遍历理论上是拷贝了一份的！<br />为了我编写了一个示例：
 
@@ -596,6 +600,9 @@ func (this *Task) Clone() Task {
 }
 ```
 再次检测race，又发现了问题：
+
+```text
+
 ==================
 WARNING: DATA RACE
 Read at 0x00c0000c0b78 by goroutine 15:
@@ -881,6 +888,7 @@ FAIL	github.com/songxinjianqwe/scheduler/cli/client	9.045s
 ok  	github.com/songxinjianqwe/scheduler/daemon/engine/standalone	43.060s
 ?   	github.com/songxinjianqwe/scheduler/daemon/handler	[no test files]
 ?   	github.com/songxinjianqwe/scheduler/daemon/server	[no test files]
+```
 
 
 其中有sliceCopy的读与task的appendResult之间的读写冲突，于是我在Clone外面加了一层读锁，以此保证读到的results是在一次完整的写操作之后、下次写操作之前的一个正确的快照。
