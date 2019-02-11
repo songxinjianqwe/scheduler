@@ -560,13 +560,15 @@ func TestCopy(t *testing.T) {
 }
 ```
 输出结果：
-> main.Person{Name:"p1", Age:1, Cars:[]main.Car{main.Car{Name:"c1"}, main.Car{Name:"c2"}}}
-> main.Person{Name:"p2", Age:2, Cars:[]main.Car{main.Car{Name:"c1"}, main.Car{Name:"c2"}}}
-> main.Person{Name:"p1", Age:1, Cars:[]main.Car{main.Car{Name:"c3"}, main.Car{Name:"c2"}}}
-> main.Person{Name:"p2", Age:2, Cars:[]main.Car{main.Car{Name:"c1"}, main.Car{Name:"c2"}}}
-
+```text
+main.Person{Name:"p1", Age:1, Cars:[]main.Car{main.Car{Name:"c1"}, main.Car{Name:"c2"}}}
+main.Person{Name:"p2", Age:2, Cars:[]main.Car{main.Car{Name:"c1"}, main.Car{Name:"c2"}}}
+main.Person{Name:"p1", Age:1, Cars:[]main.Car{main.Car{Name:"c3"}, main.Car{Name:"c2"}}}
+main.Person{Name:"p2", Age:2, Cars:[]main.Car{main.Car{Name:"c1"}, main.Car{Name:"c2"}}}
+```
 
 注意，这里修改person的Name，并没有影响到拷贝后的personList；但是修改car的状态，会影响！<br />原因是[]Car是一个切片类型，切片类型是引用类型，而struct结构体拷贝是浅拷贝，所以没有拷贝[]Car！
+
 ##### 再次检测race
 这是List()原来的实现，我
 ```go
