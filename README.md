@@ -2,11 +2,8 @@
 
 # 单机scheduler实现，包含客户端和服务器
 [![Travis-CI](https://travis-ci.org/songxinjianqwe/scheduler.svg)](https://travis-ci.org/songxinjianqwe/scheduler)
-
 [![GoDoc](https://godoc.org/github.com/songxinjianqwe/scheduler?status.svg)](http://godoc.org/github.com/songxinjianqwe/scheduler)
-
 [![codecov](https://codecov.io/github/songxinjianqwe/scheduler/coverage.svg)](https://codecov.io/gh/songxinjianqwe/scheduler)
-
 [![Report card](https://goreportcard.com/badge/github.com/songxinjianqwe/scheduler)](https://goreportcard.com/report/github.com/songxinjianqwe/scheduler)
 
 [https://github.com/songxinjianqwe/scheduler](https://github.com/songxinjianqwe/scheduler)
