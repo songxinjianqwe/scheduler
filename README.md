@@ -1,18 +1,12 @@
 # Scheduler
-[![Travis-CI](https://travis-ci.org/songxinjianqwe/scheduler.svg)](https://travis-ci.org/songxinjianqwe/scheduler)
-[![GoDoc](https://godoc.org/github.com/songxinjianqwe/scheduler?status.svg)](http://godoc.org/github.com/songxinjianqwe/scheduler)
-[![codecov](https://codecov.io/github/songxinjianqwe/scheduler/coverage.svg)](https://codecov.io/gh/songxinjianqwe/scheduler)
-[![Report card](https://goreportcard.com/badge/github.com/songxinjianqwe/scheduler)](https://goreportcard.com/report/github.com/songxinjianqwe/scheduler)
 
 # 单机scheduler实现，包含客户端和服务器
 [https://github.com/songxinjianqwe/scheduler](https://github.com/songxinjianqwe/scheduler)
-
 ## 初衷
 1、毕设计划实现一个简化版的Docker容器<br />2、目前需要熟悉Go语言<br />3、学习Docker的架构
 * Docker分为Docker Daemon（HTTP Server）和Docker CLI（命令行工具），而我自己实现的scheduler也是这种架构
 
 4、后续可以将命令执行环境从宿主机移至容器中，以增强隔离性。计划依赖containerd来实现，进一步熟悉容器技术。
-
 ## 架构
 CS架构，Client为CLI工具，Server为HTTP Server，均使用Go语言编写。
 
@@ -112,7 +106,7 @@ Methods: DELETE
 ![image.png](https://cdn.nlark.com/yuque/0/2019/png/257642/1549697473486-b2eb5e58-486d-4883-ada4-23cd33254402.png#align=left&display=inline&height=84&linkTarget=_blank&name=image.png&originHeight=105&originWidth=602&size=19755&width=482)
 ## 难点
 #### 并发
-submit任务之后的execute与stop不会在同一个goroutine中执行，由此会带来并发问题。
+写写并发：submit任务之后的execute与stop不会在同一个goroutine中执行，由此会带来并发问题。<br />读写并发：List读取操作并不要求返回快照，否则代价太大，需要加全局锁，阻塞所有写操作（然后拷贝一份）。使用go test -race会检测到一系列的读写race，基本都是List()的读操作与对某些task的状态的写操作造成的，但这并不代表程序状态错误。<br />sync.Map#Range能做到的应该是遍历目前现存的所有元素，但不会保证每个元素的值都是在同一时刻的快照。而我们确实也不需要保证读到的是快照。
 #### long polling（watch）
 watch是自己实现了一个HTTP长轮询
 

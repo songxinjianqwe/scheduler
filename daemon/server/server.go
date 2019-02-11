@@ -20,7 +20,7 @@ func Run() {
 	subRouter.HandleFunc("/{id}", handler.StopTask).Methods("PUT")
 	subRouter.HandleFunc("/{id}", handler.DeleteTask).Methods("DELETE")
 
-	// 打印一下handlers
+	// print handlers
 	router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		pathTemplate, err := route.GetPathTemplate()
 		if err == nil {
