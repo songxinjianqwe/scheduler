@@ -145,13 +145,13 @@ func (this *Task) GetLatest(watch bool, version int64) Task {
 	this.lock.RLock()
 	defer this.lock.RUnlock()
 	if !watch || this.Version != version {
-		return *this
+		return this.Clone()
 	}
 	for this.Version == version {
 		// 此时版本相同，需要阻塞等待
 		this.watchCond.Wait()
 	}
-	return *this
+	return this.Clone()
 }
 
 // @Atomically
