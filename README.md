@@ -22,18 +22,17 @@
 CS架构，Client为CLI工具，Server为HTTP Server，均使用Go语言编写。
 
 ## 安装
-### 客户端CLI
-
 1. `go get "github.com/songxinjianqwe/scheduler"`
-1. `cd $GOPATH/src/github.com/songxinjianqwe/scheduler/cli`
-1. `go install`
-1. .`/cli`
+2. `cd $GOPATH/src/github.com/songxinjianqwe/scheduler`
+3. `go install`
+4. `cd $GOPATH/bin`
+
+### 客户端CLI
+`./scheduler list`
 
 ### 服务器
+`./scheduler daemon或./scheduler d`
 
-1. `cd $GOPATH/src/github.com/songxinjianqwe/scheduler/daemon`
-1. `go install`
-1. `./daemon`<br />
 启动服务器后会在命令行中打印出REST API：
 
 * 返回所有任务，对应客户端list命令<br />
