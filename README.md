@@ -108,377 +108,396 @@ Methods: DELETE
 #### 并发
 写写并发：submit任务之后的execute与stop不会在同一个goroutine中执行，由此会带来并发问题。<br />~~读写并发：List读取操作并不要求返回快照，否则代价太大，需要加全局锁，阻塞所有写操作（然后拷贝一份）。使用go test -race会检测到一系列的读写race，基本都是List()的读操作与对某些task的状态的写操作造成的，但这并不代表程序状态错误。~~<br />~~sync.Map#Range能做到的应该是遍历目前现存的所有元素，但不会保证每个元素的值都是在同一时刻的快照。而我们确实也不需要保证读到的是快照。~~
 ##### 首次检测race
-> ==================
-> WARNING: DATA RACE
-> Read at 0x00c0001b62b8 by goroutine 15:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:86 +0x89
->  sync.(*Map).Range()
->      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
->  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> Previous write at 0x00c0001b62b8 by goroutine 23:
->  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:174 +0x27b
->  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
-> Goroutine 15 (running) created at:
->  net/http.(*Server).Serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
->  net/http.(*Server).ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
->  net/http.ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
->  github.com/songxinjianqwe/scheduler/daemon/server.Run()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
-> Goroutine 23 (finished) created at:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
->  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> ==================
-> ==================
-> WARNING: DATA RACE
-> Read at 0x00c0001b62d0 by goroutine 15:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:86 +0x89
->  sync.(*Map).Range()
->      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
->  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> Previous write at 0x00c0001b62d0 by goroutine 23:
->  github.com/songxinjianqwe/scheduler/common.(*Task).updateStatus()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:190 +0x42
->  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:177 +0x2f2
->  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
-> Goroutine 15 (running) created at:
->  net/http.(*Server).Serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
->  net/http.(*Server).ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
->  net/http.ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
->  github.com/songxinjianqwe/scheduler/daemon/server.Run()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
-> Goroutine 23 (finished) created at:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
->  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> ==================
-> ==================
-> WARNING: DATA RACE
-> Read at 0x00c0001b62d8 by goroutine 15:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:86 +0x89
->  sync.(*Map).Range()
->      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
->  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> Previous write at 0x00c0001b62d8 by goroutine 23:
->  github.com/songxinjianqwe/scheduler/common.(*Task).updateStatus()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:191 +0x8d
->  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:177 +0x2f2
->  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
-> Goroutine 15 (running) created at:
->  net/http.(*Server).Serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
->  net/http.(*Server).ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
->  net/http.ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
->  github.com/songxinjianqwe/scheduler/daemon/server.Run()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
-> Goroutine 23 (finished) created at:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
->  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> ==================
-> ==================
-> WARNING: DATA RACE
-> Read at 0x00c0001b62f0 by goroutine 15:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:86 +0x89
->  sync.(*Map).Range()
->      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
->  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> Previous write at 0x00c0001b62f0 by goroutine 23:
->  github.com/songxinjianqwe/scheduler/common.(*Task).increaseVersionAndSignalListeners()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:196 +0x63
->  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:185 +0x303
->  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
-> Goroutine 15 (running) created at:
->  net/http.(*Server).Serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
->  net/http.(*Server).ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
->  net/http.ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
->  github.com/songxinjianqwe/scheduler/daemon/server.Run()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
-> Goroutine 23 (finished) created at:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
->  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> ==================
-> ==================
-> WARNING: DATA RACE
-> Read at 0x00c0001a0780 by goroutine 15:
->  reflect.typedmemmove()
->      /usr/local/Cellar/go/1.11.5/libexec/src/runtime/mbarrier.go:177 +0x0
->  reflect.packEface()
->      /usr/local/Cellar/go/1.11.5/libexec/src/reflect/value.go:119 +0x103
->  reflect.valueInterface()
->      /usr/local/Cellar/go/1.11.5/libexec/src/reflect/value.go:1008 +0x16f
->  reflect.Value.Interface()
->      /usr/local/Cellar/go/1.11.5/libexec/src/reflect/value.go:978 +0x51
->  encoding/json.marshalerEncoder()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:448 +0x99
->  encoding/json.(*structEncoder).encode()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:647 +0x307
->  encoding/json.(*structEncoder).encode-fm()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:661 +0x7b
->  encoding/json.(*arrayEncoder).encode()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:769 +0x12a
->  encoding/json.(*arrayEncoder).encode-fm()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:776 +0x7b
->  encoding/json.(*sliceEncoder).encode()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:743 +0xf1
->  encoding/json.(*sliceEncoder).encode-fm()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:755 +0x7b
->  encoding/json.(*structEncoder).encode()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:647 +0x307
->  encoding/json.(*structEncoder).encode-fm()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:661 +0x7b
->  encoding/json.(*arrayEncoder).encode()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:769 +0x12a
->  encoding/json.(*arrayEncoder).encode-fm()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:776 +0x7b
->  encoding/json.(*sliceEncoder).encode()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:743 +0xf1
->  encoding/json.(*sliceEncoder).encode-fm()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:755 +0x7b
->  encoding/json.(*encodeState).reflectValue()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:333 +0x93
->  encoding/json.(*encodeState).marshal()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:305 +0xad
->  encoding/json.Marshal()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:160 +0x73
->  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:30 +0xfd
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> Previous write at 0x00c0001a0780 by goroutine 23:
->  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:174 +0x22e
->  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
-> Goroutine 15 (running) created at:
->  net/http.(*Server).Serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
->  net/http.(*Server).ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
->  net/http.ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
->  github.com/songxinjianqwe/scheduler/daemon/server.Run()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
-> Goroutine 23 (finished) created at:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
->  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> ==================
-> ==================
-> WARNING: DATA RACE
-> Read at 0x00c0001a0798 by goroutine 15:
->  reflect.Value.String()
->      /usr/local/Cellar/go/1.11.5/libexec/src/reflect/value.go:1711 +0x5c
->  encoding/json.stringEncoder()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:610 +0xda
->  encoding/json.(*structEncoder).encode()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:647 +0x307
->  encoding/json.(*structEncoder).encode-fm()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:661 +0x7b
->  encoding/json.(*arrayEncoder).encode()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:769 +0x12a
->  encoding/json.(*arrayEncoder).encode-fm()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:776 +0x7b
->  encoding/json.(*sliceEncoder).encode()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:743 +0xf1
->  encoding/json.(*sliceEncoder).encode-fm()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:755 +0x7b
->  encoding/json.(*structEncoder).encode()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:647 +0x307
->  encoding/json.(*structEncoder).encode-fm()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:661 +0x7b
->  encoding/json.(*arrayEncoder).encode()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:769 +0x12a
->  encoding/json.(*arrayEncoder).encode-fm()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:776 +0x7b
->  encoding/json.(*sliceEncoder).encode()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:743 +0xf1
->  encoding/json.(*sliceEncoder).encode-fm()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:755 +0x7b
->  encoding/json.(*encodeState).reflectValue()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:333 +0x93
->  encoding/json.(*encodeState).marshal()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:305 +0xad
->  encoding/json.Marshal()
->      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:160 +0x73
->  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:30 +0xfd
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> Previous write at 0x00c0001a0798 by goroutine 23:
->  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:174 +0x22e
->  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
-> Goroutine 15 (running) created at:
->  net/http.(*Server).Serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
->  net/http.(*Server).ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
->  net/http.ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
->  github.com/songxinjianqwe/scheduler/daemon/server.Run()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
-> Goroutine 23 (finished) created at:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
->  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> ==================
-> --- FAIL: TestSubmit (3.01s)
->    testing.go:771: race detected during execution of test
-> time="2019-02-11T09:42:54+08:00" level=info msg="Receive a task:common.Task{Id:\"test_delay_7ebfd222-c94c-4c71-b923-88122c260b54\", TaskType:\"delay\", Time:2000000000, Script:\"echo 1\", Results:[]common.TaskResult(nil), Status:0, LastStatusUpdated:time.Time{wall:0xc6dbb70, ext:63685446174, loc:(*time.Location)(0x17d8900)}, Version:0, timer:(*time.Timer)(nil), ticker:(*time.Ticker)(nil), lock:(*sync.Mutex)(nil), watchCond:(*sync.Cond)(nil)}"
-> time="2019-02-11T09:42:56+08:00" level=info msg="start executing task[test_delay_7ebfd222-c94c-4c71-b923-88122c260b54]"
-> time="2019-02-11T09:42:56+08:00" level=info msg="Task stdout: 1\n"
-> time="2019-02-11T09:42:57+08:00" level=info msg="start stopping task[test_delay_7ebfd222-c94c-4c71-b923-88122c260b54]"
-> FAIL
-> coverage: 60.3% of statements
-> Found 6 data race(s)
+
+==================
+WARNING: DATA RACE
+Read at 0x00c0001b62b8 by goroutine 15:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:86 +0x89
+  sync.(*Map).Range()
+      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
+  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+
+Previous write at 0x00c0001b62b8 by goroutine 23:
+  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:174 +0x27b
+  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
+
+Goroutine 15 (running) created at:
+  net/http.(*Server).Serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
+  net/http.(*Server).ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
+  net/http.ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
+  github.com/songxinjianqwe/scheduler/daemon/server.Run()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
+
+Goroutine 23 (finished) created at:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
+  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+==================
+==================
+WARNING: DATA RACE
+Read at 0x00c0001b62d0 by goroutine 15:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:86 +0x89
+  sync.(*Map).Range()
+      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
+  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+
+Previous write at 0x00c0001b62d0 by goroutine 23:
+  github.com/songxinjianqwe/scheduler/common.(*Task).updateStatus()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:190 +0x42
+  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:177 +0x2f2
+  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
+
+Goroutine 15 (running) created at:
+  net/http.(*Server).Serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
+  net/http.(*Server).ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
+  net/http.ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
+  github.com/songxinjianqwe/scheduler/daemon/server.Run()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
+
+Goroutine 23 (finished) created at:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
+  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+==================
+==================
+WARNING: DATA RACE
+Read at 0x00c0001b62d8 by goroutine 15:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:86 +0x89
+  sync.(*Map).Range()
+      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
+  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+
+Previous write at 0x00c0001b62d8 by goroutine 23:
+  github.com/songxinjianqwe/scheduler/common.(*Task).updateStatus()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:191 +0x8d
+  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:177 +0x2f2
+  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
+
+Goroutine 15 (running) created at:
+  net/http.(*Server).Serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
+  net/http.(*Server).ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
+  net/http.ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
+  github.com/songxinjianqwe/scheduler/daemon/server.Run()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
+
+Goroutine 23 (finished) created at:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
+  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+==================
+==================
+WARNING: DATA RACE
+Read at 0x00c0001b62f0 by goroutine 15:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:86 +0x89
+  sync.(*Map).Range()
+      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
+  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+
+Previous write at 0x00c0001b62f0 by goroutine 23:
+  github.com/songxinjianqwe/scheduler/common.(*Task).increaseVersionAndSignalListeners()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:196 +0x63
+  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:185 +0x303
+  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
+
+Goroutine 15 (running) created at:
+  net/http.(*Server).Serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
+  net/http.(*Server).ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
+  net/http.ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
+  github.com/songxinjianqwe/scheduler/daemon/server.Run()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
+
+Goroutine 23 (finished) created at:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
+  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+==================
+==================
+WARNING: DATA RACE
+Read at 0x00c0001a0780 by goroutine 15:
+  reflect.typedmemmove()
+      /usr/local/Cellar/go/1.11.5/libexec/src/runtime/mbarrier.go:177 +0x0
+  reflect.packEface()
+      /usr/local/Cellar/go/1.11.5/libexec/src/reflect/value.go:119 +0x103
+  reflect.valueInterface()
+      /usr/local/Cellar/go/1.11.5/libexec/src/reflect/value.go:1008 +0x16f
+  reflect.Value.Interface()
+      /usr/local/Cellar/go/1.11.5/libexec/src/reflect/value.go:978 +0x51
+  encoding/json.marshalerEncoder()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:448 +0x99
+  encoding/json.(*structEncoder).encode()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:647 +0x307
+  encoding/json.(*structEncoder).encode-fm()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:661 +0x7b
+  encoding/json.(*arrayEncoder).encode()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:769 +0x12a
+  encoding/json.(*arrayEncoder).encode-fm()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:776 +0x7b
+  encoding/json.(*sliceEncoder).encode()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:743 +0xf1
+  encoding/json.(*sliceEncoder).encode-fm()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:755 +0x7b
+  encoding/json.(*structEncoder).encode()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:647 +0x307
+  encoding/json.(*structEncoder).encode-fm()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:661 +0x7b
+  encoding/json.(*arrayEncoder).encode()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:769 +0x12a
+  encoding/json.(*arrayEncoder).encode-fm()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:776 +0x7b
+  encoding/json.(*sliceEncoder).encode()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:743 +0xf1
+  encoding/json.(*sliceEncoder).encode-fm()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:755 +0x7b
+  encoding/json.(*encodeState).reflectValue()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:333 +0x93
+  encoding/json.(*encodeState).marshal()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:305 +0xad
+  encoding/json.Marshal()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:160 +0x73
+  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:30 +0xfd
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+
+Previous write at 0x00c0001a0780 by goroutine 23:
+  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:174 +0x22e
+  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
+
+Goroutine 15 (running) created at:
+  net/http.(*Server).Serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
+  net/http.(*Server).ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
+  net/http.ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
+  github.com/songxinjianqwe/scheduler/daemon/server.Run()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
+
+Goroutine 23 (finished) created at:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
+  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+==================
+==================
+WARNING: DATA RACE
+Read at 0x00c0001a0798 by goroutine 15:
+  reflect.Value.String()
+      /usr/local/Cellar/go/1.11.5/libexec/src/reflect/value.go:1711 +0x5c
+  encoding/json.stringEncoder()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:610 +0xda
+  encoding/json.(*structEncoder).encode()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:647 +0x307
+  encoding/json.(*structEncoder).encode-fm()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:661 +0x7b
+  encoding/json.(*arrayEncoder).encode()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:769 +0x12a
+  encoding/json.(*arrayEncoder).encode-fm()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:776 +0x7b
+  encoding/json.(*sliceEncoder).encode()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:743 +0xf1
+  encoding/json.(*sliceEncoder).encode-fm()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:755 +0x7b
+  encoding/json.(*structEncoder).encode()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:647 +0x307
+  encoding/json.(*structEncoder).encode-fm()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:661 +0x7b
+  encoding/json.(*arrayEncoder).encode()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:769 +0x12a
+  encoding/json.(*arrayEncoder).encode-fm()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:776 +0x7b
+  encoding/json.(*sliceEncoder).encode()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:743 +0xf1
+  encoding/json.(*sliceEncoder).encode-fm()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:755 +0x7b
+  encoding/json.(*encodeState).reflectValue()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:333 +0x93
+  encoding/json.(*encodeState).marshal()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:305 +0xad
+  encoding/json.Marshal()
+      /usr/local/Cellar/go/1.11.5/libexec/src/encoding/json/encode.go:160 +0x73
+  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:30 +0xfd
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+
+Previous write at 0x00c0001a0798 by goroutine 23:
+  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:174 +0x22e
+  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
+
+Goroutine 15 (running) created at:
+  net/http.(*Server).Serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
+  net/http.(*Server).ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
+  net/http.ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
+  github.com/songxinjianqwe/scheduler/daemon/server.Run()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
+
+Goroutine 23 (finished) created at:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
+  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+==================
+--- FAIL: TestSubmit (3.01s)
+    testing.go:771: race detected during execution of test
+time="2019-02-11T09:42:54+08:00" level=info msg="Receive a task:common.Task{Id:\"test_delay_7ebfd222-c94c-4c71-b923-88122c260b54\", TaskType:\"delay\", Time:2000000000, Script:\"echo 1\", Results:[]common.TaskResult(nil), Status:0, LastStatusUpdated:time.Time{wall:0xc6dbb70, ext:63685446174, loc:(*time.Location)(0x17d8900)}, Version:0, timer:(*time.Timer)(nil), ticker:(*time.Ticker)(nil), lock:(*sync.Mutex)(nil), watchCond:(*sync.Cond)(nil)}"
+time="2019-02-11T09:42:56+08:00" level=info msg="start executing task[test_delay_7ebfd222-c94c-4c71-b923-88122c260b54]"
+time="2019-02-11T09:42:56+08:00" level=info msg="Task stdout: 1\n"
+time="2019-02-11T09:42:57+08:00" level=info msg="start stopping task[test_delay_7ebfd222-c94c-4c71-b923-88122c260b54]"
+FAIL
+coverage: 60.3% of statements
+Found 6 data race(s)
 
 
 仔细观察，发现其中很大一部分是先写（比如task的状态更新），再在List()中json序列化时读，出现读写冲突。<br />但是在List()时遍历理论上是拷贝了一份的！<br />为了我编写了一个示例：
@@ -577,276 +596,292 @@ func (this *Task) Clone() Task {
 }
 ```
 再次检测race，又发现了问题：
-> ==================
-> WARNING: DATA RACE
-> Read at 0x00c0000c0b78 by goroutine 15:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:201 +0xe2
->  sync.(*Map).Range()
->      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
->  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> Previous write at 0x00c0000c0b78 by goroutine 22:
->  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:174 +0x27b
->  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
-> Goroutine 15 (running) created at:
->  net/http.(*Server).Serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
->  net/http.(*Server).ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
->  net/http.ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
->  github.com/songxinjianqwe/scheduler/daemon/server.Run()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
-> Goroutine 22 (finished) created at:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
->  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> ==================
-> ==================
-> WARNING: DATA RACE
-> Read at 0x00c0000c0b90 by goroutine 15:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:201 +0xe2
->  sync.(*Map).Range()
->      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
->  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> Previous write at 0x00c0000c0b90 by goroutine 22:
->  github.com/songxinjianqwe/scheduler/common.(*Task).updateStatus()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:190 +0x42
->  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:177 +0x2f2
->  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
-> Goroutine 15 (running) created at:
->  net/http.(*Server).Serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
->  net/http.(*Server).ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
->  net/http.ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
->  github.com/songxinjianqwe/scheduler/daemon/server.Run()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
-> Goroutine 22 (finished) created at:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
->  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> ==================
-> ==================
-> WARNING: DATA RACE
-> Read at 0x00c0000c0b98 by goroutine 15:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:201 +0xe2
->  sync.(*Map).Range()
->      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
->  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> Previous write at 0x00c0000c0b98 by goroutine 22:
->  github.com/songxinjianqwe/scheduler/common.(*Task).updateStatus()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:191 +0x8d
->  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:177 +0x2f2
->  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
-> Goroutine 15 (running) created at:
->  net/http.(*Server).Serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
->  net/http.(*Server).ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
->  net/http.ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
->  github.com/songxinjianqwe/scheduler/daemon/server.Run()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
-> Goroutine 22 (finished) created at:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
->  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> ==================
-> ==================
-> WARNING: DATA RACE
-> Read at 0x00c0000c0bb0 by goroutine 15:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:201 +0xe2
->  sync.(*Map).Range()
->      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
->  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> Previous write at 0x00c0000c0bb0 by goroutine 22:
->  github.com/songxinjianqwe/scheduler/common.(*Task).increaseVersionAndSignalListeners()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:196 +0x63
->  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:185 +0x303
->  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
-> Goroutine 15 (running) created at:
->  net/http.(*Server).Serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
->  net/http.(*Server).ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
->  net/http.ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
->  github.com/songxinjianqwe/scheduler/daemon/server.Run()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
-> Goroutine 22 (finished) created at:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
->  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> ==================
-> ==================
-> WARNING: DATA RACE
-> Read at 0x00c0000892c0 by goroutine 15:
->  runtime.slicecopy()
->      /usr/local/Cellar/go/1.11.5/libexec/src/runtime/slice.go:221 +0x0
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:207 +0x211
->  sync.(*Map).Range()
->      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
->  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> Previous write at 0x00c0000892c0 by goroutine 22:
->  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:174 +0x22e
->  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
-> Goroutine 15 (running) created at:
->  net/http.(*Server).Serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
->  net/http.(*Server).ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
->  net/http.ListenAndServe()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
->  github.com/songxinjianqwe/scheduler/daemon/server.Run()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
-> Goroutine 22 (finished) created at:
->  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
->  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
->  net/http.HandlerFunc.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
->  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
->      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
->  net/http.serverHandler.ServeHTTP()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
->  net/http.(*conn).serve()
->      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
-> ==================
-> --- FAIL: TestSubmit (3.01s)
->    testing.go:771: race detected during execution of test
-> time="2019-02-11T16:34:33+08:00" level=info msg="Receive a task:common.Task{Id:\"test_delay_266aa0c3-fc83-4fa7-abb6-1ed69d692ae3\", TaskType:\"delay\", Time:2000000000, Script:\"echo 1\", Results:[]common.TaskResult(nil), Status:0, LastStatusUpdated:time.Time{wall:0xf9dbde0, ext:63685470873, loc:(*time.Location)(0x17d7640)}, Version:0, timer:(*time.Timer)(nil), ticker:(*time.Ticker)(nil), lock:(*sync.RWMutex)(nil), watchCond:(*sync.Cond)(nil)}"
-> time="2019-02-11T16:34:35+08:00" level=info msg="start executing task[test_delay_266aa0c3-fc83-4fa7-abb6-1ed69d692ae3]"
-> time="2019-02-11T16:34:35+08:00" level=info msg="Task stdout: 1\n"
-> time="2019-02-11T16:34:36+08:00" level=info msg="start stopping task[test_delay_266aa0c3-fc83-4fa7-abb6-1ed69d692ae3]"
-> FAIL
-> Found 5 data race(s)
-> FAIL	github.com/songxinjianqwe/scheduler/cli/client	9.045s
-> ?    github.com/songxinjianqwe/scheduler/cli/command	[no test files]
-> ?    github.com/songxinjianqwe/scheduler/common	[no test files]
-> ?    github.com/songxinjianqwe/scheduler/common/run	[no test files]
-> ?    github.com/songxinjianqwe/scheduler/daemon	[no test files]
-> ?    github.com/songxinjianqwe/scheduler/daemon/engine	[no test files]
-> ok  	github.com/songxinjianqwe/scheduler/daemon/engine/standalone	43.060s
-> ?    github.com/songxinjianqwe/scheduler/daemon/handler	[no test files]
-> ?    github.com/songxinjianqwe/scheduler/daemon/server	[no test files]
+==================
+WARNING: DATA RACE
+Read at 0x00c0000c0b78 by goroutine 15:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:201 +0xe2
+  sync.(*Map).Range()
+      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
+  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+
+Previous write at 0x00c0000c0b78 by goroutine 22:
+  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:174 +0x27b
+  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
+
+Goroutine 15 (running) created at:
+  net/http.(*Server).Serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
+  net/http.(*Server).ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
+  net/http.ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
+  github.com/songxinjianqwe/scheduler/daemon/server.Run()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
+
+Goroutine 22 (finished) created at:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
+  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+==================
+==================
+WARNING: DATA RACE
+Read at 0x00c0000c0b90 by goroutine 15:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:201 +0xe2
+  sync.(*Map).Range()
+      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
+  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+
+Previous write at 0x00c0000c0b90 by goroutine 22:
+  github.com/songxinjianqwe/scheduler/common.(*Task).updateStatus()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:190 +0x42
+  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:177 +0x2f2
+  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
+
+Goroutine 15 (running) created at:
+  net/http.(*Server).Serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
+  net/http.(*Server).ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
+  net/http.ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
+  github.com/songxinjianqwe/scheduler/daemon/server.Run()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
+
+Goroutine 22 (finished) created at:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
+  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+==================
+==================
+WARNING: DATA RACE
+Read at 0x00c0000c0b98 by goroutine 15:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:201 +0xe2
+  sync.(*Map).Range()
+      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
+  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+
+Previous write at 0x00c0000c0b98 by goroutine 22:
+  github.com/songxinjianqwe/scheduler/common.(*Task).updateStatus()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:191 +0x8d
+  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:177 +0x2f2
+  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
+
+Goroutine 15 (running) created at:
+  net/http.(*Server).Serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
+  net/http.(*Server).ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
+  net/http.ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
+  github.com/songxinjianqwe/scheduler/daemon/server.Run()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
+
+Goroutine 22 (finished) created at:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
+  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+==================
+==================
+WARNING: DATA RACE
+Read at 0x00c0000c0bb0 by goroutine 15:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:201 +0xe2
+  sync.(*Map).Range()
+      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
+  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+
+Previous write at 0x00c0000c0bb0 by goroutine 22:
+  github.com/songxinjianqwe/scheduler/common.(*Task).increaseVersionAndSignalListeners()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:196 +0x63
+  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:185 +0x303
+  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
+
+Goroutine 15 (running) created at:
+  net/http.(*Server).Serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
+  net/http.(*Server).ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
+  net/http.ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
+  github.com/songxinjianqwe/scheduler/daemon/server.Run()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
+
+Goroutine 22 (finished) created at:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
+  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+==================
+==================
+WARNING: DATA RACE
+Read at 0x00c0000892c0 by goroutine 15:
+  runtime.slicecopy()
+      /usr/local/Cellar/go/1.11.5/libexec/src/runtime/slice.go:221 +0x0
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:207 +0x211
+  sync.(*Map).Range()
+      /usr/local/Cellar/go/1.11.5/libexec/src/sync/map.go:337 +0x13c
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).List()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:85 +0x77
+  github.com/songxinjianqwe/scheduler/daemon/handler.GetAllTasksHandler()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:25 +0xa1
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+
+Previous write at 0x00c0000892c0 by goroutine 22:
+  github.com/songxinjianqwe/scheduler/common.(*Task).appendResultAndUpdateStatusAtomically()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:174 +0x22e
+  github.com/songxinjianqwe/scheduler/common.(*Task).Execute()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/common/task.go:97 +0x2a6
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit.func1()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:57 +0x62
+
+Goroutine 15 (running) created at:
+  net/http.(*Server).Serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2851 +0x4c5
+  net/http.(*Server).ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2764 +0xe8
+  net/http.ListenAndServe()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:3004 +0xef
+  github.com/songxinjianqwe/scheduler/daemon/server.Run()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/server/server.go:49 +0x522
+
+Goroutine 22 (finished) created at:
+  github.com/songxinjianqwe/scheduler/daemon/engine/standalone.(*StandAloneEngine).Submit()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/engine/standalone/standalone_engine_impl.go:55 +0x3c0
+  github.com/songxinjianqwe/scheduler/daemon/handler.SubmitTask()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/daemon/handler/handler.go:85 +0x35f
+  net/http.HandlerFunc.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1964 +0x51
+  github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux.(*Router).ServeHTTP()
+      /Users/jasper/go/src/github.com/songxinjianqwe/scheduler/vendor/github.com/gorilla/mux/mux.go:212 +0x12e
+  net/http.serverHandler.ServeHTTP()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:2741 +0xc4
+  net/http.(*conn).serve()
+      /usr/local/Cellar/go/1.11.5/libexec/src/net/http/server.go:1847 +0x80a
+==================
+--- FAIL: TestSubmit (3.01s)
+    testing.go:771: race detected during execution of test
+time="2019-02-11T16:34:33+08:00" level=info msg="Receive a task:common.Task{Id:\"test_delay_266aa0c3-fc83-4fa7-abb6-1ed69d692ae3\", TaskType:\"delay\", Time:2000000000, Script:\"echo 1\", Results:[]common.TaskResult(nil), Status:0, LastStatusUpdated:time.Time{wall:0xf9dbde0, ext:63685470873, loc:(*time.Location)(0x17d7640)}, Version:0, timer:(*time.Timer)(nil), ticker:(*time.Ticker)(nil), lock:(*sync.RWMutex)(nil), watchCond:(*sync.Cond)(nil)}"
+time="2019-02-11T16:34:35+08:00" level=info msg="start executing task[test_delay_266aa0c3-fc83-4fa7-abb6-1ed69d692ae3]"
+time="2019-02-11T16:34:35+08:00" level=info msg="Task stdout: 1\n"
+time="2019-02-11T16:34:36+08:00" level=info msg="start stopping task[test_delay_266aa0c3-fc83-4fa7-abb6-1ed69d692ae3]"
+FAIL
+Found 5 data race(s)
+FAIL	github.com/songxinjianqwe/scheduler/cli/client	9.045s
+?   	github.com/songxinjianqwe/scheduler/cli/command	[no test files]
+?   	github.com/songxinjianqwe/scheduler/common	[no test files]
+?   	github.com/songxinjianqwe/scheduler/common/run	[no test files]
+?   	github.com/songxinjianqwe/scheduler/daemon	[no test files]
+?   	github.com/songxinjianqwe/scheduler/daemon/engine	[no test files]
+ok  	github.com/songxinjianqwe/scheduler/daemon/engine/standalone	43.060s
+?   	github.com/songxinjianqwe/scheduler/daemon/handler	[no test files]
+?   	github.com/songxinjianqwe/scheduler/daemon/server	[no test files]
+
 
 其中有sliceCopy的读与task的appendResult之间的读写冲突，于是我在Clone外面加了一层读锁，以此保证读到的results是在一次完整的写操作之后、下次写操作之前的一个正确的快照。
 ```go
