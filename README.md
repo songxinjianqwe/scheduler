@@ -1,12 +1,26 @@
 # Scheduler
 
 # 单机scheduler实现，包含客户端和服务器
+[![Travis-CI](https://travis-ci.org/songxinjianqwe/scheduler.svg)](https://travis-ci.org/songxinjianqwe/scheduler)
+
+[![GoDoc](https://godoc.org/github.com/songxinjianqwe/scheduler?status.svg)](http://godoc.org/github.com/songxinjianqwe/scheduler)
+
+[![codecov](https://codecov.io/github/songxinjianqwe/scheduler/coverage.svg)](https://codecov.io/gh/songxinjianqwe/scheduler)
+
+[![Report card](https://goreportcard.com/badge/github.com/songxinjianqwe/scheduler)](https://goreportcard.com/report/github.com/songxinjianqwe/scheduler)
+
 [https://github.com/songxinjianqwe/scheduler](https://github.com/songxinjianqwe/scheduler)
+
 ## 初衷
-1、毕设计划实现一个简化版的Docker容器<br />2、目前需要熟悉Go语言<br />3、学习Docker的架构
-* Docker分为Docker Daemon（HTTP Server）和Docker CLI（命令行工具），而我自己实现的scheduler也是这种架构
+1、毕设计划实现一个简化版的Docker容器
+
+2、目前需要熟悉Go语言
+
+3、学习Docker的架构
+- Docker分为Docker Daemon（HTTP Server）和Docker CLI（命令行工具），而我自己实现的scheduler也是这种架构
 
 4、后续可以将命令执行环境从宿主机移至容器中，以增强隔离性。计划依赖containerd来实现，进一步熟悉容器技术。
+
 ## 架构
 CS架构，Client为CLI工具，Server为HTTP Server，均使用Go语言编写。
 
@@ -601,6 +615,7 @@ func (this *Task) Clone() Task {
 	return aCopy
 }
 ```
+
 再次检测race，又发现了问题：
 
 ```text
