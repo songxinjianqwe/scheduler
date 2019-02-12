@@ -17,11 +17,11 @@ type TaskStatus int
 // 2) ToBeExecuted -> Stopped
 // 3) ToBeExecuted -> Executing -> WaitForNextExecution -> Stopped
 const (
-	ToBeExecuted         TaskStatus = 0
-	Executed             TaskStatus = 1
-	Executing            TaskStatus = 2
-	WaitForNextExecution TaskStatus = 3
-	Stopped              TaskStatus = 4
+	ToBeExecuted         TaskStatus = iota
+	Executed             TaskStatus = iota
+	Executing            TaskStatus = iota
+	WaitForNextExecution TaskStatus = iota
+	Stopped              TaskStatus = iota
 )
 
 var statusText = map[TaskStatus]string{
