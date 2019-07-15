@@ -1,0 +1,12 @@
+# github.com/gorilla/mux v1.7.3
+github.com/gorilla/mux
+# github.com/konsorten/go-windows-terminal-sequences v1.0.2
+github.com/konsorten/go-windows-terminal-sequences
+# github.com/satori/go.uuid v1.2.0
+github.com/satori/go.uuid
+# github.com/sirupsen/logrus v1.4.2
+github.com/sirupsen/logrus
+# github.com/urfave/cli v0.0.0-20190203184040-693af58b4d51
+github.com/urfave/cli
+# golang.org/x/sys v0.0.0-20190712062909-fae7ac547cb7
+golang.org/x/sys/unix
